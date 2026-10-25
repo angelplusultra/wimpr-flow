@@ -1,13 +1,45 @@
-# Wimpr Flow
+<p align="center">
+  <img src="docs/icon.png" width="128" height="128" alt="Wimpr Flow icon: a crying face singing into a microphone">
+</p>
 
-Private voice dictation for macOS that runs entirely on your Mac. Hold a hotkey, talk, let go — your words are pasted into whatever text field has focus. Everything Wispr Flow does that matters, nothing it charges for.
+<h1 align="center">Wimpr Flow</h1>
+
+<p align="center">
+  Private voice dictation for macOS that runs entirely on your Mac.<br>
+  Hold a hotkey, talk, let go: your words are pasted into whatever text field has focus.<br>
+  Everything Wispr Flow does that matters, nothing it charges for.
+</p>
+
+<p align="center">
+  <a href="https://github.com/angelplusultra/wimpr-flow/releases/latest"><b>Download for Apple Silicon Macs</b></a>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/cleanup.png" width="760" alt="AI cleanup settings, showing the last dictation as heard (&quot;hey sean can you review my pr&quot;) and as pasted (&quot;Hey @sean.kelly, can you review my PR?&quot;)">
+</p>
 
 - **Fully on-device:** current open speech models (NVIDIA Parakeet, IBM Granite, Cohere, Mistral Voxtral, Qwen3-ASR, Whisper) run on Apple Silicon's GPU via [transcribe.cpp](https://github.com/handy-computer/transcribe.cpp). No accounts, no API keys, no network after the model download.
 - **Fast:** with the default model (Parakeet TDT v3), a few seconds of speech transcribes in well under 0.1 s on an M-series Mac.
 - **AI cleanup:** a small local LLM (Gemma 4 E2B) fixes punctuation, drops filler words and writes out emails and numbers. It takes about 0.2–0.4 s for a typical dictation.
 - **Hold-to-talk** and **hands-free toggle** hotkeys, both configurable.
+- **@mentions:** say "hey sean" in Slack, Discord or Teams and get `@sean.kelly`. App rules add your own instructions per app.
 - Pastes at the cursor in any app, then puts your previous clipboard back.
 - Lives in the menu bar.
+
+## Screenshots
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/people.png" alt="People: names you say, other spellings, and each person's handle in Slack, Discord and Teams"></td>
+    <td width="50%"><img src="docs/screenshots/models.png" alt="Speech model picker: Parakeet, Granite, Cohere, Canary-Qwen and Whisper, with download progress"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>People: say a name, get the right @mention in each app</sub></td>
+    <td align="center"><sub>Pick a speech model; they download on demand</sub></td>
+  </tr>
+</table>
+
+<sub>Screenshots use sample data.</sub>
 
 ## Quick start
 
