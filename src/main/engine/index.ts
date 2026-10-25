@@ -74,7 +74,7 @@ export class Engine {
   private ensureWorker(): UtilityProcess {
     if (this.worker) return this.worker
     const worker = utilityProcess.fork(join(__dirname, 'worker.js'), [], {
-      serviceName: 'Fuck Wispr Flow transcription',
+      serviceName: 'Wimpr Flow transcription',
       env: workerEnv(),
       stdio: 'pipe'
     })

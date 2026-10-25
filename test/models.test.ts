@@ -22,7 +22,7 @@ const entry = (over: Partial<CatalogEntry> = {}): CatalogEntry => ({
 describe('ModelManager downloads', () => {
   let dir: string
   beforeEach(() => {
-    dir = mkdtempSync(join(tmpdir(), 'fwf-models-'))
+    dir = mkdtempSync(join(tmpdir(), 'wimpr-models-'))
     vi.stubGlobal('fetch', async () => new Response(payload))
   })
   afterEach(() => {

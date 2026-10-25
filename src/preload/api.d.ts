@@ -52,6 +52,6 @@ export interface AppApi {
 
 declare global {
   interface Window {
-    fwf: AppApi
+    wimpr: AppApi
   }
 }

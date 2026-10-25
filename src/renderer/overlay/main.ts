@@ -5,7 +5,7 @@ import { playCue } from './sounds'
 // Keep capturing briefly after release so the last syllable isn't clipped.
 const TAIL_MS = 150
 
-const api = window.fwf.overlay
+const api = window.wimpr.overlay
 const pill = document.getElementById('pill') as HTMLDivElement
 const bars = Array.from(pill.querySelectorAll<HTMLElement>('.bars i'))
 const message = pill.querySelector('.message') as HTMLDivElement

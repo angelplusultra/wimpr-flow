@@ -73,7 +73,7 @@ export function openSettingsWindow(): BrowserWindow {
     height: 640,
     minWidth: 760,
     minHeight: 520,
-    title: 'Fuck Wispr Flow',
+    title: 'Wimpr Flow',
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: { x: 16, y: 18 },
     backgroundColor: '#08090a',

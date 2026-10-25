@@ -71,19 +71,6 @@ export function Dot({ tone }: { tone: 'ok' | 'busy' | 'off' | 'error' | 'warn' }
   )
 }
 
-/** The app mark: the icon's waveform. */
-export function Logo({ className }: { className?: string }): ReactNode {
-  return (
-    <svg viewBox="0 0 24 24" className={cn('size-4', className)} fill="currentColor" aria-hidden>
-      <rect x="2.5" y="9" width="2.6" height="6" rx="1.3" />
-      <rect x="7" y="5.5" width="2.6" height="13" rx="1.3" />
-      <rect x="11.5" y="2.5" width="2.6" height="19" rx="1.3" />
-      <rect x="16" y="6" width="2.6" height="12" rx="1.3" />
-      <rect x="20.5" y="9.5" width="2.6" height="5" rx="1.3" />
-    </svg>
-  )
-}
-
 export function formatSize(mb: number): string {
   return mb >= 1000 ? `${(mb / 1000).toFixed(1)} GB` : `${mb} MB`
 }

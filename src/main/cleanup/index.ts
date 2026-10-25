@@ -80,7 +80,7 @@ export class CleanupEngine {
   private ensureWorker(): UtilityProcess {
     if (this.worker) return this.worker
     const worker = utilityProcess.fork(join(__dirname, 'cleanup-worker.js'), [], {
-      serviceName: 'Fuck Wispr Flow cleanup',
+      serviceName: 'Wimpr Flow cleanup',
       stdio: 'pipe'
     })
     worker.stdout?.on('data', (d: Buffer) => process.stdout.write(`[cleanup] ${d}`))

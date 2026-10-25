@@ -21,7 +21,7 @@ import type {
 import { useDraft } from './draft'
 import { formatSize, Group, Page, Row } from './layout'
 
-const api = window.fwf.settings
+const api = window.wimpr.settings
 
 const LANGUAGES: [string, string][] = [
   ['auto', 'Auto-detect'],

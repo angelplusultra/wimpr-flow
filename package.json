@@ -1,17 +1,18 @@
 {
-  "name": "fuck-wispr-flow",
-  "productName": "Fuck Wispr Flow",
+  "name": "wimpr-flow",
+  "productName": "Wimpr Flow",
   "version": "0.1.0",
   "description": "Private, local voice dictation for macOS.",
   "main": "./out/main/index.js",
-  "author": "Fuck Wispr Flow",
+  "author": "Wimpr Flow",
   "license": "MIT",
   "private": true,
   "scripts": {
     "dev": "electron-vite dev",
-    "dev:fresh": "rm -rf \"${TMPDIR:-/tmp}/fwf-fresh\" && FWF_USER_DATA=\"${TMPDIR:-/tmp}/fwf-fresh\" electron-vite dev",
+    "dev:fresh": "rm -rf \"${TMPDIR:-/tmp}/wimpr-fresh\" && WIMPR_USER_DATA=\"${TMPDIR:-/tmp}/wimpr-fresh\" electron-vite dev",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
+    "icons": "electron scripts/icons.cjs build/icon-source.png",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "test": "vitest run",
     "dist": "electron-vite build && electron-builder --mac --publish never"

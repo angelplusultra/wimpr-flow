@@ -3,11 +3,12 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { cn } from '@/lib/utils'
 import type { CleanupStatus, EngineStatus, ModelInfo, PermissionStatus, SettingsPatch, SettingsView } from '../../shared/types'
-import { Dot, Logo } from './layout'
+import appIcon from '@/assets/app-icon.png'
+import { Dot } from './layout'
 import { CleanupPage } from './cleanup'
 import { DictionaryPage, GeneralPage, ModelsPage, ShortcutsPage } from './pages'
 
-const api = window.fwf.settings
+const api = window.wimpr.settings
 
 type PageId = 'general' | 'models' | 'cleanup' | 'dictionary' | 'shortcuts'
 
@@ -65,10 +66,9 @@ export function App(): ReactNode {
         {/* Room for the traffic lights; doubles as a drag handle. */}
         <div className="h-12 shrink-0 [-webkit-app-region:drag]" />
         <div className="flex items-center gap-2.5 px-4 pb-5">
-          <div className="flex size-6 items-center justify-center rounded-md border bg-card">
-            <Logo className="size-3.5" />
-          </div>
-          <span className="text-[13px] font-semibold tracking-[-0.01em]">Fuck Wispr Flow</span>
+          {/* The app icon has macOS's transparent margin built in, so it's drawn slightly larger. */}
+          <img src={appIcon} alt="" draggable={false} className="-my-1 -ml-1 size-8" />
+          <span className="text-[13px] font-semibold tracking-[-0.01em]">Wimpr Flow</span>
         </div>
         <nav className="flex flex-col gap-px px-2">
           {NAV.map(({ id, label, icon: Icon }) => (

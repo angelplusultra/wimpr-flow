@@ -1,4 +1,4 @@
-# Fuck Wispr Flow
+# Wimpr Flow
 
 Private voice dictation for macOS that runs entirely on your Mac. Hold a hotkey, talk, let go — your words are pasted into whatever text field has focus. Everything Wispr Flow does that matters, nothing it charges for.
 
@@ -24,7 +24,7 @@ On first launch:
 2. **Wait for the models.** The speech model (Parakeet TDT v3, 740 MB) downloads automatically, then the cleanup model (Gemma 4 E2B, 3.1 GB). Progress shows in Settings and in the menu bar. Dictation works as soon as the speech model is ready; until the cleanup model is ready, text is pasted unformatted.
 3. Click into any text field, **hold Right ⌥ Option**, talk, release.
 
-To build a standalone app run `pnpm dist`. That produces `dist/fuck-wispr-flow-<version>-arm64.dmg`, signed with a local certificate (see Code signing). People who install it need nothing else.
+To build a standalone app run `pnpm dist`. That produces `dist/wimpr-flow-<version>-arm64.dmg`, signed with a local certificate (see Code signing). People who install it need nothing else.
 
 ## People and @mentions
 
@@ -42,7 +42,7 @@ Settings → AI cleanup → App rules adds free-form instructions for AI cleanup
 
 ## Models
 
-Pick one in Settings. Models download on demand to `~/Library/Application Support/Fuck Wispr Flow/models` (settings and models from the old open-wispr name are moved there on first launch), and you can switch between downloaded ones from the menu bar. These are transcribe.cpp's verified GGUF builds, quantized to the smallest size that matches full-precision accuracy.
+Pick one in Settings. Models download on demand to `~/Library/Application Support/Wimpr Flow/models` (settings and models from the app's earlier names, Fuck Wispr Flow and open-wispr, are moved there on first launch), and you can switch between downloaded ones from the menu bar. These are transcribe.cpp's verified GGUF builds, quantized to the smallest size that matches full-precision accuracy.
 
 | Model | Size | Languages | Notes |
 | --- | --- | --- | --- |
@@ -127,7 +127,7 @@ pnpm typecheck
 ## Troubleshooting
 
 - **Settings still says "Grant" even though Accessibility is turned on.** In dev, the toggle has to be on for your *terminal* app, not "Electron". See Quick start.
-- **The hotkey does nothing.** Accessibility isn't granted, or it was granted to a build signed differently (e.g. before the signing certificate was set up, or without it). In System Settings → Privacy & Security → Accessibility, remove the Fuck Wispr Flow (or Electron) entry and grant it again. Or run `tccutil reset Accessibility dev.fuckwisprflow.app` and grant it again.
+- **The hotkey does nothing.** Accessibility isn't granted, or it was granted to a build signed differently (e.g. before the signing certificate was set up, or without it). In System Settings → Privacy & Security → Accessibility, remove the Wimpr Flow (or Electron) entry and grant it again. Or run `tccutil reset Accessibility dev.wimprflow.app` and grant it again.
 - **The text was transcribed but never pasted.** No text field had focus. Use **Paste last transcript** or **Copy last transcript** from the menu bar.
 - **Fn / Globe key.** The keyboard hook can't see it, so it isn't supported yet.
 
@@ -171,16 +171,19 @@ On the first build, macOS asks whether codesign may use the key: enter your pass
 
 ## App icon
 
-The icon's source is `build/icon.svg`. electron-builder uses `build/icon.icns` for the app bundle, and dev mode uses `build/icon.png` in the dock. After editing the SVG, render it to a 1024×1024 PNG with any SVG renderer and rebuild the `.icns`:
+Every icon comes from one black-on-white image, `build/icon-source.png`:
 
 ```sh
-mkdir icon.iconset
-for s in 16 32 128 256 512; do
-  sips -z $s $s build/icon.png --out icon.iconset/icon_${s}x${s}.png
-  sips -z $((s*2)) $((s*2)) build/icon.png --out icon.iconset/icon_${s}x${s}@2x.png
-done
-iconutil -c icns icon.iconset -o build/icon.icns && rm -r icon.iconset
+pnpm icons
 ```
+
+That cuts the drawing out of its background and writes:
+
+- `build/icon.png` and `build/icon.icns`: the app icon, with the drawing in white on a dark rounded square sized to the macOS icon grid
+- `src/main/tray-images.ts`: menu bar template images, the solid face when idle and its outline while recording
+- `src/renderer/assets/app-icon.png`: the icon in the settings sidebar
+
+To change the icon, replace `build/icon-source.png` with another dark drawing on a light background and run it again.
 
 ## License
 

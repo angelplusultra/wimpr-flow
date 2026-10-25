@@ -49,4 +49,4 @@ const api: AppApi = {
   }
 }
 
-contextBridge.exposeInMainWorld('fwf', api)
+contextBridge.exposeInMainWorld('wimpr', api)

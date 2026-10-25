@@ -7,9 +7,9 @@ import { migrateLegacyData } from '../src/main/migrate'
 describe('migrateLegacyData', () => {
   let root: string, legacy: string, current: string
   beforeEach(() => {
-    root = mkdtempSync(join(tmpdir(), 'fwf-migrate-'))
+    root = mkdtempSync(join(tmpdir(), 'wimpr-migrate-'))
     legacy = join(root, 'open-wispr')
-    current = join(root, 'Fuck Wispr Flow')
+    current = join(root, 'Wimpr Flow')
     mkdirSync(join(legacy, 'models'), { recursive: true })
     writeFileSync(join(legacy, 'settings.json'), '{"settings":{"model":"granite"}}')
     writeFileSync(join(legacy, 'models', 'granite.gguf'), 'g')

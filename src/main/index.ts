@@ -26,11 +26,13 @@ import { createOverlayWindow, openSettingsWindow, settingsWindow, showOverlay } 
 
 // Run against a different settings/models folder, e.g. to try a fresh install (`pnpm dev:fresh`).
 // Must be set before the single-instance lock, which is per folder.
-if (process.env.FWF_USER_DATA) app.setPath('userData', process.env.FWF_USER_DATA)
+if (process.env.WIMPR_USER_DATA) app.setPath('userData', process.env.WIMPR_USER_DATA)
 else {
-  // Carry settings and models over from when the app was called open-wispr.
+  // Carry settings and models over from the app's earlier names, newest first.
   try {
-    migrateLegacyData(join(app.getPath('appData'), 'open-wispr'), app.getPath('userData'))
+    for (const legacy of ['Fuck Wispr Flow', 'open-wispr']) {
+      if (migrateLegacyData(join(app.getPath('appData'), legacy), app.getPath('userData'))) break
+    }
   } catch (err) {
     console.error('[migrate] failed:', err)
   }
@@ -121,10 +123,10 @@ function rebuildTrayMenu(): void {
   const cleanup = cleanupLabel(cleaner.status)
 
   tray.setImage(trayIcon(state === 'recording' || state === 'transcribing'))
-  tray.setToolTip(`Fuck Wispr Flow — ${STATE_LABEL[state]}`)
+  tray.setToolTip(`Wimpr Flow — ${STATE_LABEL[state]}`)
   tray.setContextMenu(
     Menu.buildFromTemplate([
-      { label: `Fuck Wispr Flow — ${STATE_LABEL[state]}`, enabled: false },
+      { label: `Wimpr Flow — ${STATE_LABEL[state]}`, enabled: false },
       { label: engineLabel(transcriber.status), enabled: false },
       ...(cleanup ? [{ label: cleanup, enabled: false }] : []),
       ...(hotkeys.isStarted
@@ -155,7 +157,7 @@ function rebuildTrayMenu(): void {
       },
       { label: 'Settings…', accelerator: 'Command+,', click: () => openSettingsWindow() },
       { type: 'separator' },
-      { label: 'Quit Fuck Wispr Flow', accelerator: 'Command+Q', click: () => app.quit() }
+      { label: 'Quit Wimpr Flow', accelerator: 'Command+Q', click: () => app.quit() }
     ])
   )
 }
@@ -265,7 +267,7 @@ app.whenReady().then(() => {
     cleanup: (text, app) => cleaner.clean(text, app),
     focusedApp: frontmostApp,
     paste: pasteNow,
-    notifyError: (message) => new Notification({ title: 'Fuck Wispr Flow', body: message, silent: true }).show(),
+    notifyError: (message) => new Notification({ title: 'Wimpr Flow', body: message, silent: true }).show(),
     onStateChange: () => rebuildTrayMenu(),
     resetHotkeys: () => hotkeys.reset()
   })

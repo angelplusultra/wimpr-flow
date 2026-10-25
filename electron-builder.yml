@@ -1,6 +1,6 @@
-appId: dev.fuckwisprflow.app
-productName: Fuck Wispr Flow
-artifactName: fuck-wispr-flow-${version}-${arch}.${ext}
+appId: dev.wimprflow.app
+productName: Wimpr Flow
+artifactName: wimpr-flow-${version}-${arch}.${ext}
 directories:
   buildResources: build
   output: dist
@@ -28,4 +28,4 @@ mac:
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
     LSUIElement: true
-    NSMicrophoneUsageDescription: Fuck Wispr Flow records your voice while the dictation hotkey is held, to transcribe it.
+    NSMicrophoneUsageDescription: Wimpr Flow records your voice while the dictation hotkey is held, to transcribe it.
