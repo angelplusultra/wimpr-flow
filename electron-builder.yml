@@ -1,0 +1,29 @@
+appId: dev.fuckwisprflow.app
+productName: Fuck Wispr Flow
+artifactName: fuck-wispr-flow-${version}-${arch}.${ext}
+directories:
+  buildResources: build
+  output: dist
+files:
+  - out/**
+  - package.json
+# Native code is loaded with dlopen, which can't read from inside app.asar.
+asarUnpack:
+  - node_modules/uiohook-napi/**
+  - node_modules/koffi/**
+  - node_modules/@transcribe-cpp/**
+  - node_modules/node-llama-cpp/**
+  - node_modules/@node-llama-cpp/**
+npmRebuild: false
+mac:
+  target:
+    - target: dmg
+      arch: [arm64]
+  category: public.app-category.productivity
+  identity: "-" # ad-hoc sign; set a Developer ID here to distribute
+  hardenedRuntime: true
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+  extendInfo:
+    LSUIElement: true
+    NSMicrophoneUsageDescription: Fuck Wispr Flow records your voice while the dictation hotkey is held, to transcribe it.

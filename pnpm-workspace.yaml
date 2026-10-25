@@ -1,0 +1,9 @@
+nodeLinker: hoisted
+allowBuilds:
+  electron: true
+  esbuild: true
+  koffi: true
+  uiohook-napi: true
+  electron-winstaller: false
+  # Ships prebuilt Metal binaries; its postinstall only builds from source as a fallback.
+  node-llama-cpp: false
