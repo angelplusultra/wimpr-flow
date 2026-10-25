@@ -129,7 +129,14 @@ export interface CleanupStatus {
    * The most recent dictation. `applied`: the cleaned text was pasted. Otherwise the raw
    * transcript was: `rejected` means the output strayed too far from what was said.
    */
-  last?: { ms: number; outcome: 'applied' | 'unchanged' | 'rejected' | 'timeout' | 'error' }
+  last?: {
+    ms: number
+    outcome: 'applied' | 'unchanged' | 'rejected' | 'timeout' | 'error'
+    /** What the speech model heard. */
+    raw: string
+    /** What was pasted. */
+    text: string
+  }
 }
 
 /** What the settings window sees. */

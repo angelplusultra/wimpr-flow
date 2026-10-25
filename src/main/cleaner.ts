@@ -74,7 +74,7 @@ export class Cleaner {
       outcome = 'error'
       console.error('[cleanup] failed:', err)
     }
-    this.setStatus({ ...this._status, last: { ms: Math.round(performance.now() - start), outcome } })
+    this.setStatus({ ...this._status, last: { ms: Math.round(performance.now() - start), outcome, raw: text, text: result } })
     return result
   }
 

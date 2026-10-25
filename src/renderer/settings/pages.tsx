@@ -364,7 +364,25 @@ export function CleanupPage({
           </Row>
         )}
       </Group>
+
+      {status?.last && (
+        <Group title="Last dictation">
+          <Transcript label="Heard" text={status.last.raw} muted />
+          <Transcript label="Pasted" text={status.last.text} />
+        </Group>
+      )}
     </Page>
+  )
+}
+
+function Transcript({ label, text, muted }: { label: string; text: string; muted?: boolean }): ReactNode {
+  return (
+    <div className="flex gap-4 px-4 py-3">
+      <div className="w-14 shrink-0 pt-px text-xs text-subtle">{label}</div>
+      <p className={'min-w-0 text-[13px] leading-relaxed select-text ' + (muted ? 'text-muted-foreground' : 'text-foreground')}>
+        {text}
+      </p>
+    </div>
   )
 }
 
