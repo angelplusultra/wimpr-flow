@@ -109,6 +109,12 @@ const CLEANUP_OUTCOME: Record<NonNullable<CleanupStatus['last']>['outcome'], str
   error: ' · failed, pasted raw'
 }
 
+/** " · on Vulkan (NVIDIA …)"; on CPU, cleanup often runs past its time limit, so say so. */
+function onDevice(device: string | undefined): ReactNode {
+  if (!device) return null
+  return device === 'CPU' ? ' · on CPU, so long dictations may be pasted raw' : ` · on ${device}`
+}
+
 function cleanupSummary(status: CleanupStatus): ReactNode {
   switch (status.state) {
     case 'off':
@@ -124,9 +130,10 @@ function cleanupSummary(status: CleanupStatus): ReactNode {
         <>
           Last cleanup <span className="text-foreground tabular-nums">{(status.last.ms / 1000).toFixed(2)}s</span>
           {CLEANUP_OUTCOME[status.last.outcome]}
+          {onDevice(status.device)}
         </>
       ) : (
-        'Ready'
+        <>Ready{onDevice(status.device)}</>
       )
     default:
       return null

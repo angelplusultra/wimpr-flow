@@ -45,6 +45,10 @@ export class HotkeyMachine {
     return this.pressed.size > 0
   }
 
+  get pressedKeys(): number[] {
+    return [...this.pressed]
+  }
+
   get currentMode(): Mode {
     return this.mode
   }

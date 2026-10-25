@@ -7,7 +7,7 @@ export type ToWorker =
   | { type: 'transcribe'; id: number; pcm: Float32Array; options: RunOptions }
 
 export type FromWorker =
-  | { type: 'loaded'; capabilities: ModelCapabilities; loadMs: number }
+  | { type: 'loaded'; capabilities: ModelCapabilities; loadMs: number; device: string }
   | { type: 'load-error'; message: string }
   | { type: 'result'; id: number; text: string; ms: number }
   | { type: 'error'; id: number; message: string }

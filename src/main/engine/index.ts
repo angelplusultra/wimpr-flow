@@ -9,21 +9,31 @@ interface Waiter<T> {
   reject: (err: Error) => void
 }
 
+/** transcribe.cpp's prebuilt package for this platform, as its loader picks it. */
+const NATIVE_PACKAGE: Partial<Record<string, [string, string]>> = {
+  'darwin-arm64': ['darwin-arm64-metal', 'libtranscribe.dylib'],
+  'darwin-x64': ['darwin-x64-cpu', 'libtranscribe.dylib'],
+  'linux-x64': ['linux-x64-cpu-vulkan', 'libtranscribe.so'],
+  'linux-arm64': ['linux-arm64-cpu-vulkan', 'libtranscribe.so'],
+  'win32-x64': ['win32-x64-cpu-vulkan', 'transcribe.dll']
+}
+
 /**
  * The prebuilt transcribe.cpp library is loaded with dlopen, which can't read inside
  * app.asar, so packaged builds point it at the unpacked copy.
  */
 function workerEnv(): NodeJS.ProcessEnv {
-  if (!app.isPackaged) return process.env
-  const lib = join(
-    process.resourcesPath,
-    'app.asar.unpacked',
-    'node_modules',
-    '@transcribe-cpp',
-    'darwin-arm64-metal',
-    'libtranscribe.dylib'
-  )
+  const native = NATIVE_PACKAGE[`${process.platform}-${process.arch}`]
+  if (!app.isPackaged || !native) return process.env
+  const [tuple, file] = native
+  const lib = join(process.resourcesPath, 'app.asar.unpacked', 'node_modules', '@transcribe-cpp', tuple, file)
   return { ...process.env, TRANSCRIBE_LIBRARY: lib }
+}
+
+interface LoadResult {
+  capabilities: ModelCapabilities
+  loadMs: number
+  device: string
 }
 
 /** Owns the transcription worker process and the model loaded in it. */
@@ -31,7 +41,8 @@ export class Engine {
   private worker: UtilityProcess | null = null
   private loadedPath: string | null = null
   private capabilities: ModelCapabilities | null = null
-  private loads: (Waiter<{ capabilities: ModelCapabilities; loadMs: number }> & { path: string })[] = []
+  private device = ''
+  private loads: (Waiter<LoadResult> & { path: string })[] = []
   private pending = new Map<number, Waiter<{ text: string; ms: number }>>()
   private nextId = 1
 
@@ -40,9 +51,9 @@ export class Engine {
   }
 
   /** Load `modelPath` unless it's already loaded (or loading). */
-  load(modelPath: string): Promise<{ capabilities: ModelCapabilities; loadMs: number }> {
+  load(modelPath: string): Promise<LoadResult> {
     if (this.loadedPath === modelPath && this.capabilities && this.loads.length === 0) {
-      return Promise.resolve({ capabilities: this.capabilities, loadMs: 0 })
+      return Promise.resolve({ capabilities: this.capabilities, loadMs: 0, device: this.device })
     }
     const inFlight = this.loads.at(-1)
     if (inFlight?.path === modelPath) {
@@ -98,7 +109,8 @@ export class Engine {
         if (msg.type === 'loaded') {
           this.loadedPath = waiters[0]?.path ?? null
           this.capabilities = msg.capabilities
-          for (const w of waiters) w.resolve({ capabilities: msg.capabilities, loadMs: msg.loadMs })
+          this.device = msg.device
+          for (const w of waiters) w.resolve({ capabilities: msg.capabilities, loadMs: msg.loadMs, device: msg.device })
         } else {
           this.loadedPath = null
           this.capabilities = null

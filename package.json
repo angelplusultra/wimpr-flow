@@ -2,7 +2,7 @@
   "name": "wimpr-flow",
   "productName": "Wimpr Flow",
   "version": "0.1.0",
-  "description": "Private, local voice dictation for macOS.",
+  "description": "Private, local voice dictation for macOS, Windows and Linux.",
   "main": "./out/main/index.js",
   "author": "Wimpr Flow",
   "license": "MIT",
@@ -15,9 +15,13 @@
     "icons": "electron scripts/icons.cjs build/icon-source.png",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "test": "vitest run",
-    "dist": "electron-vite build && electron-builder --mac --publish never"
+    "dist": "electron-vite build && electron-builder --publish never",
+    "dist:mac": "electron-vite build && electron-builder --mac --publish never",
+    "dist:win": "electron-vite build && electron-builder --win --publish never",
+    "dist:linux": "electron-vite build && electron-builder --linux --publish never"
   },
   "dependencies": {
+    "koffi": "3.3.3",
     "node-llama-cpp": "3.22.2",
     "transcribe-cpp": "0.4.1",
     "uiohook-napi": "^1.5.5"

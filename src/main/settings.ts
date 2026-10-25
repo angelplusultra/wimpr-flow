@@ -2,7 +2,7 @@ import { app } from 'electron'
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { applyPatch, mergeSettings } from '../shared/settings-merge'
-import { DEFAULT_SETTINGS, type Settings, type SettingsPatch } from '../shared/types'
+import { defaultSettings, type Settings, type SettingsPatch } from '../shared/types'
 
 type Listener = (settings: Settings, previous: Settings) => void
 
@@ -35,12 +35,12 @@ export class SettingsStore {
     try {
       if (existsSync(this.file)) {
         // Unknown keys (e.g. from older versions) are dropped by mergeSettings.
-        return mergeSettings(DEFAULT_SETTINGS, JSON.parse(readFileSync(this.file, 'utf8')).settings)
+        return mergeSettings(defaultSettings(process.platform), JSON.parse(readFileSync(this.file, 'utf8')).settings)
       }
     } catch (err) {
       console.error('[settings] failed to read, using defaults:', err)
     }
-    return structuredClone(DEFAULT_SETTINGS)
+    return defaultSettings(process.platform)
   }
 
   private save(): void {

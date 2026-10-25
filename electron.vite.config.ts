@@ -7,11 +7,12 @@ export default defineConfig({
   main: {
     build: {
       rollupOptions: {
-        // The transcription and cleanup workers each run in their own utility process.
+        // The transcription, cleanup and (Linux) keyboard workers each run in their own utility process.
         input: {
           index: resolve(__dirname, 'src/main/index.ts'),
           worker: resolve(__dirname, 'src/main/engine/worker.ts'),
-          'cleanup-worker': resolve(__dirname, 'src/main/cleanup/worker.ts')
+          'cleanup-worker': resolve(__dirname, 'src/main/cleanup/worker.ts'),
+          'input-worker': resolve(__dirname, 'src/main/platform/linux/input-worker.ts')
         }
       }
     }

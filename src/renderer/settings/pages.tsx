@@ -14,6 +14,7 @@ import type {
   ModelInfo,
   ModelProgress,
   PermissionStatus,
+  PlatformCheck,
   Settings,
   SettingsPatch,
   SettingsView
@@ -50,17 +51,19 @@ type Update = (patch: SettingsPatch) => void
 
 export function GeneralPage({
   settings,
+  launchAtLoginHint,
   permissions,
   onPermissions,
   update
 }: {
   settings: Settings
+  launchAtLoginHint?: string
   permissions: PermissionStatus | null
   onPermissions: (p: PermissionStatus) => void
   update: Update
 }): ReactNode {
   return (
-    <Page title="General" description="Hold your hotkey, talk, let go. Everything runs on this Mac.">
+    <Page title="General" description="Hold your hotkey, talk, let go. Everything runs on this computer.">
       {permissions && <Permissions status={permissions} onChange={onPermissions} />}
       <Group title="Behavior">
         <Row title="Sounds" description="Play a short cue when recording starts and stops.">
@@ -69,7 +72,7 @@ export function GeneralPage({
         <Row title="Restore clipboard" description="Put back whatever you had copied after pasting.">
           <Switch checked={settings.restoreClipboard} onCheckedChange={(restoreClipboard) => update({ restoreClipboard })} />
         </Row>
-        <Row title="Launch at login">
+        <Row title="Launch at login" description={settings.launchAtLogin ? launchAtLoginHint : undefined}>
           <Switch checked={settings.launchAtLogin} onCheckedChange={(launchAtLogin) => update({ launchAtLogin })} />
         </Row>
         <Row title="Ignore short taps" description="Recordings shorter than this are thrown away.">
@@ -92,26 +95,7 @@ export function GeneralPage({
 }
 
 function Permissions({ status, onChange }: { status: PermissionStatus; onChange: (s: PermissionStatus) => void }): ReactNode {
-  const row = (kind: 'microphone' | 'accessibility', title: string, why: string, granted: boolean): ReactNode => (
-    <Row title={title} description={why}>
-      {granted ? (
-        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <Check className="size-3.5" />
-          Granted
-        </span>
-      ) : (
-        <>
-          <Button size="sm" variant="ghost" className="text-muted-foreground" onClick={() => void api.openPermissionSettings(kind)}>
-            Open Settings
-          </Button>
-          <Button size="sm" onClick={() => void api.requestPermission(kind).then(onChange)}>
-            Grant
-          </Button>
-        </>
-      )}
-    </Row>
-  )
-  const missing = status.microphone !== 'granted' || !status.accessibility
+  const missing = status.checks.some((c) => !c.ok)
   return (
     <Group
       title="Permissions"
@@ -124,9 +108,63 @@ function Permissions({ status, onChange }: { status: PermissionStatus; onChange:
         ) : undefined
       }
     >
-      {row('microphone', 'Microphone', 'To hear you while the hotkey is active.', status.microphone === 'granted')}
-      {row('accessibility', 'Accessibility', 'To detect the hotkey and paste into other apps.', status.accessibility)}
+      {status.checks.map((check) => (
+        <CheckRow key={check.id} check={check} onChange={onChange} />
+      ))}
     </Group>
+  )
+}
+
+function CheckRow({ check, onChange }: { check: PlatformCheck; onChange: (s: PermissionStatus) => void }): ReactNode {
+  const [copied, setCopied] = useState(false)
+  const copy = (command: string): void =>
+    void navigator.clipboard.writeText(command).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    })
+  const description = (
+    <>
+      {check.description}
+      {!check.ok && check.hint && <span className="mt-1 block text-warning">{check.hint}</span>}
+      {!check.ok && check.command && (
+        <code className="mt-2 block max-h-40 overflow-auto rounded-md bg-muted px-2 py-1.5 font-mono text-[11px] whitespace-pre text-foreground select-text">
+          {check.command}
+        </code>
+      )}
+    </>
+  )
+  return (
+    <Row title={check.label} description={description}>
+      {check.ok ? (
+        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Check className="size-3.5" />
+          Granted
+        </span>
+      ) : (
+        <>
+          {check.openSettings && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-muted-foreground"
+              onClick={() => void api.openPermissionSettings(check.id)}
+            >
+              Open Settings
+            </Button>
+          )}
+          {check.request && (
+            <Button size="sm" onClick={() => void api.requestPermission(check.id).then(onChange)}>
+              Grant
+            </Button>
+          )}
+          {check.command && (
+            <Button size="sm" variant="outline" onClick={() => copy(check.command!)}>
+              {copied ? 'Copied' : 'Copy'}
+            </Button>
+          )}
+        </>
+      )}
+    </Row>
   )
 }
 
@@ -146,9 +184,10 @@ function engineSummary(engine: EngineStatus | null): ReactNode {
         <>
           Last dictation: {(engine.last.audioMs / 1000).toFixed(1)}s of audio in{' '}
           <span className="text-foreground tabular-nums">{(engine.last.transcribeMs / 1000).toFixed(2)}s</span>
+          {engine.device && ` on ${engine.device}`}
         </>
       ) : (
-        <>Ready</>
+        <>Ready{engine.device && ` on ${engine.device}`}</>
       )
     default:
       return null

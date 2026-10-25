@@ -13,7 +13,8 @@ import type {
 } from '../shared/types'
 
 type Unsubscribe = () => void
-type PermissionKind = 'microphone' | 'accessibility'
+/** A PlatformCheck id. */
+type PermissionKind = string
 
 export interface AppApi {
   overlay: {

@@ -43,9 +43,9 @@ export class Transcriber {
 
     this.setStatus({ state: 'loading', modelId: id, last: undefined })
     try {
-      const { capabilities } = await this.deps.engine.load(path)
+      const { capabilities, device } = await this.deps.engine.load(path)
       if (this.deps.getSettings().model !== id) return // switched again meanwhile
-      this.setStatus({ state: 'ready', modelId: id, capabilities })
+      this.setStatus({ state: 'ready', modelId: id, capabilities, device })
     } catch (err) {
       if (this.deps.getSettings().model !== id) return
       this.setStatus({ state: 'error', modelId: id, message: `Couldn't load model: ${(err as Error).message}` })

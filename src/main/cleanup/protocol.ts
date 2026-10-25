@@ -10,7 +10,7 @@ export type ToCleanupWorker =
   | { type: 'dispose' }
 
 export type FromCleanupWorker =
-  | { type: 'loaded'; loadMs: number }
+  | { type: 'loaded'; loadMs: number; device: string }
   | { type: 'load-error'; message: string }
   | { type: 'result'; id: number; text: string; ms: number }
   | { type: 'error'; id: number; message: string }

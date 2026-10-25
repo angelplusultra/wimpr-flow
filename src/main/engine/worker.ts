@@ -1,6 +1,7 @@
 // Runs in an Electron utility process, so the model stays loaded between dictations and
 // a native crash can't take the app down with it.
 import type { TranscribeModel as Model } from 'transcribe-cpp'
+import { deviceLabel } from '../../shared/device'
 import type { FromWorker, ToWorker } from './protocol'
 
 const port = process.parentPort
@@ -20,9 +21,11 @@ async function load(modelPath: string): Promise<void> {
     // The first run pays one-time GPU setup; do it now instead of on the user's dictation.
     await model.transcribe(new Float32Array(16_000))
     const caps = model.capabilities
+    const { deviceType, kind, description } = model.device
     send({
       type: 'loaded',
       loadMs: Math.round(performance.now() - start),
+      device: deviceType === 'cpu' ? 'CPU' : deviceLabel(kind, [description]),
       capabilities: {
         languages: caps.languages,
         languageDetect: caps.supportsLanguageDetect,

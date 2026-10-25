@@ -7,10 +7,13 @@ directories:
 files:
   - out/**
   - package.json
+  # CUDA builds of llama.cpp are hundreds of MB and need a CUDA toolkit; Vulkan covers NVIDIA too.
+  - '!node_modules/@node-llama-cpp/*cuda*/**'
 # Native code is loaded with dlopen, which can't read from inside app.asar.
 asarUnpack:
   - node_modules/uiohook-napi/**
   - node_modules/koffi/**
+  - node_modules/@koromix/**
   - node_modules/@transcribe-cpp/**
   - node_modules/node-llama-cpp/**
   - node_modules/@node-llama-cpp/**
@@ -29,3 +32,42 @@ mac:
   extendInfo:
     LSUIElement: true
     NSMicrophoneUsageDescription: Wimpr Flow records your voice while the dictation hotkey is held, to transcribe it.
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  # transcribe.cpp needs the VC++ 2015–2022 runtime 14.40+; CI copies it into build/win-crt
+  # (see .github/workflows/release.yml) so it ships next to the exe instead of as an installer.
+  extraFiles:
+    - from: build/win-crt
+      to: .
+      filter: ['*.dll']
+nsis:
+  oneClick: true
+  perMachine: false
+linux:
+  target:
+    - target: AppImage
+      arch: [x64]
+    - target: pacman
+      arch: [x64]
+  executableName: wimpr-flow
+  category: Utility
+  synopsis: Private, local voice dictation
+  description: Hold a hotkey, talk, let go; your words are pasted into whatever has focus. Runs entirely on your computer.
+  desktop:
+    entry:
+      Name: Wimpr Flow
+      Comment: Private, local voice dictation
+pacman:
+  # Electron's own runtime libraries, Vulkan for the GPU, and the Wayland paste tools.
+  depends:
+    - gtk3
+    - nss
+    - alsa-lib
+    - libxss
+    - libxtst
+    - libnotify
+    - vulkan-icd-loader
+    - wl-clipboard
+    - wtype

@@ -45,7 +45,7 @@ export function App(): ReactNode {
     return () => offs.forEach((off) => off())
   }, [refreshModels])
 
-  // Permissions are granted in System Settings, so poll while the window is open.
+  // Permissions are granted outside the app (System Settings, a terminal), so poll while the window is open.
   useEffect(() => {
     const refresh = (): void => void api.getPermissions().then(setPermissions)
     refresh()
@@ -57,14 +57,15 @@ export function App(): ReactNode {
 
   if (!view) return null
   const { settings } = view
-  const needsPermissions = !!permissions && (permissions.microphone !== 'granted' || !permissions.accessibility)
+  const needsPermissions = !!permissions && permissions.checks.some((c) => !c.ok)
+  const mac = view.platform === 'darwin'
   const modelName = models.find((m) => m.id === (engine?.modelId ?? settings.model))?.name ?? 'Speech model'
 
   return (
     <div className="flex h-screen overflow-hidden select-none">
       <aside className="flex w-56 shrink-0 flex-col border-r bg-background">
-        {/* Room for the traffic lights; doubles as a drag handle. */}
-        <div className="h-12 shrink-0 [-webkit-app-region:drag]" />
+        {/* Room for the traffic lights (and Windows' title bar buttons); doubles as a drag handle. */}
+        <div className={cn('shrink-0 [-webkit-app-region:drag]', mac || view.platform === 'win32' ? 'h-12' : 'h-5')} />
         <div className="flex items-center gap-2.5 px-4 pb-5">
           {/* The app icon has macOS's transparent margin built in, so it's drawn slightly larger. */}
           <img src={appIcon} alt="" draggable={false} className="-my-1 -ml-1 size-8" />
@@ -100,7 +101,13 @@ export function App(): ReactNode {
         <div className="absolute inset-x-0 top-0 z-10 h-10 [-webkit-app-region:drag]" />
         <ScrollArea className="h-full">
           {page === 'general' && (
-            <GeneralPage settings={settings} permissions={permissions} onPermissions={setPermissions} update={update} />
+            <GeneralPage
+              settings={settings}
+              launchAtLoginHint={view.launchAtLoginHint}
+              permissions={permissions}
+              onPermissions={setPermissions}
+              update={update}
+            />
           )}
           {page === 'models' && (
             <ModelsPage

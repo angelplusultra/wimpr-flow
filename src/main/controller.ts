@@ -19,7 +19,8 @@ export interface ControllerDeps {
   cleanup: (text: string, app: AppInfo | null) => Promise<string>
   /** The app in front, i.e. the one the text will be pasted into. */
   focusedApp: () => Promise<AppInfo | null>
-  paste: (text: string) => Promise<void>
+  /** `app` is the one that was in front when recording started. */
+  paste: (text: string, app: AppInfo | null) => Promise<void>
   notifyError: (message: string) => void
   onStateChange: (state: AppState) => void
   resetHotkeys: () => void
@@ -84,11 +85,12 @@ export class Controller {
         this.finish()
         return
       }
-      const text = await this.deps.cleanup(raw, await this.targetApp)
+      const target = await this.targetApp
+      const text = await this.deps.cleanup(raw, target)
       if (result.sessionId !== this.sessionId) return
       this.lastTranscript = text
       this.deps.hideOverlay()
-      await this.deps.paste(text)
+      await this.deps.paste(text, target)
       this.finish()
     } catch (err) {
       if (result.sessionId !== this.sessionId) return

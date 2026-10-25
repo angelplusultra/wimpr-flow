@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseAppInfo, parseAppList } from '../src/main/focused-app'
+import { parseAppInfo, parseAppList } from '../src/main/platform/darwin/apps'
 
 describe('parseAppInfo', () => {
   it('reads the bundle id and display name', () => {

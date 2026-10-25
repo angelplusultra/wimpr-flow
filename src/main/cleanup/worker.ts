@@ -1,5 +1,6 @@
 // Runs the cleanup LLM in its own utility process, like the transcription worker.
 import type { ChatHistoryItem, Llama, LlamaChatSession, LlamaContext, LlamaModel } from 'node-llama-cpp'
+import { deviceLabel } from '../../shared/device'
 import { EXAMPLES, SYSTEM_PROMPT, transcriptMessage, type TargetApp } from './prompt'
 import type { FromCleanupWorker, ToCleanupWorker } from './protocol'
 
@@ -28,7 +29,7 @@ async function load(modelPath: string): Promise<void> {
   const { getLlama, LlamaChatSession, LlamaLogLevel } = await import('node-llama-cpp')
   const start = performance.now()
   try {
-    // Prebuilt Metal binaries only; never try to compile llama.cpp on the user's machine.
+    // Prebuilt binaries only (Metal, Vulkan or CPU); never compile llama.cpp on the user's machine.
     llama ??= await getLlama({ build: 'never', logLevel: LlamaLogLevel.error })
     await loaded?.model.dispose()
     loaded = null
@@ -37,12 +38,17 @@ async function load(modelPath: string): Promise<void> {
     const session = new LlamaChatSession({ contextSequence: context.getSequence() })
     loaded = { model, context, session }
     await clean('warm up', [], new AbortController().signal) // fills the prefix cache
-    send({ type: 'loaded', loadMs: Math.round(performance.now() - start) })
+    send({ type: 'loaded', loadMs: Math.round(performance.now() - start), device: await deviceName(llama) })
   } catch (err) {
     await loaded?.model.dispose()
     loaded = null
     send({ type: 'load-error', message: (err as Error).message })
   }
+}
+
+async function deviceName(llama: Llama): Promise<string> {
+  if (!llama.gpu) return 'CPU'
+  return deviceLabel(llama.gpu, await llama.getGpuDeviceNames().catch(() => []))
 }
 
 async function clean(text: string, vocabulary: string[], signal: AbortSignal, app?: TargetApp): Promise<string> {

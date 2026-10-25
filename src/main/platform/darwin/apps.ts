@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
-import type { AppInfo } from '../shared/types'
+import type { AppInfo } from '../../../shared/types'
 
 const run = promisify(execFile)
 

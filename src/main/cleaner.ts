@@ -143,8 +143,8 @@ export class Cleaner {
 
     this.setStatus(this.statusFor('loading'))
     try {
-      await engine.load(this.path)
-      this.setStatus(this.statusFor('ready'))
+      const { device } = await engine.load(this.path)
+      this.setStatus({ ...this.statusFor('ready'), device })
     } catch (err) {
       // Turning cleanup off mid-load stops the engine, which rejects the load.
       if (!this.deps.getSettings().cleanup) this.setStatus(this.statusFor('off'))

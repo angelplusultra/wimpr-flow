@@ -1,3 +1,5 @@
+import { UIOHOOK_KEYS } from './keycodes'
+
 export interface Hotkeys {
   /** Keys held down to record; recording stops when any is released. `null` disables. */
   hold: number[] | null
@@ -7,6 +9,7 @@ export interface Hotkeys {
 
 /** An app the user dictates into. */
 export interface AppInfo {
+  /** macOS bundle id, Windows exe name (lower case) or Hyprland window class. */
   bundleId: string
   name: string
 }
@@ -39,6 +42,22 @@ export const DEFAULT_MENTION_APPS: MentionApp[] = [
   { bundleId: 'com.microsoft.teams2', name: 'Microsoft Teams', enabled: true }
 ]
 
+/** Mention apps by platform; app ids differ between macOS, Windows and Linux. */
+const MENTION_APPS_BY_PLATFORM: Record<string, MentionApp[]> = {
+  darwin: DEFAULT_MENTION_APPS,
+  win32: [
+    { bundleId: 'slack.exe', name: 'Slack', enabled: true },
+    { bundleId: 'discord.exe', name: 'Discord', enabled: true },
+    { bundleId: 'ms-teams.exe', name: 'Microsoft Teams', enabled: true }
+  ],
+  linux: [
+    { bundleId: 'Slack', name: 'Slack', enabled: true },
+    { bundleId: 'discord', name: 'Discord', enabled: true },
+    { bundleId: 'vesktop', name: 'Vesktop', enabled: true },
+    { bundleId: 'teams-for-linux', name: 'Teams for Linux', enabled: true }
+  ]
+}
+
 export interface Settings {
   /** Catalog id of the model to transcribe with. */
   model: string
@@ -63,10 +82,9 @@ export interface Settings {
   onboarded: boolean
 }
 
-// uiohook keycodes, duplicated here because the renderer can't load the native module.
-export const KEY_ALT_RIGHT = 3640
-export const KEY_SPACE = 57
-export const KEY_ESCAPE = 1
+export const KEY_ALT_RIGHT: number = UIOHOOK_KEYS.AltRight
+export const KEY_SPACE: number = UIOHOOK_KEYS.Space
+export const KEY_ESCAPE: number = UIOHOOK_KEYS.Escape
 
 export const DEFAULT_MODEL = 'parakeet-tdt-0.6b-v3'
 
@@ -88,6 +106,11 @@ export const DEFAULT_SETTINGS: Settings = {
   restoreClipboard: true,
   launchAtLogin: false,
   onboarded: false
+}
+
+/** DEFAULT_SETTINGS with the mention apps for `platform`. */
+export function defaultSettings(platform: string): Settings {
+  return { ...structuredClone(DEFAULT_SETTINGS), mentionApps: structuredClone(MENTION_APPS_BY_PLATFORM[platform] ?? []) }
 }
 
 export type SettingsPatch = {
@@ -119,10 +142,26 @@ export interface StartRecording {
   sounds: boolean
 }
 
+/** Something the app needs from the system: a permission, a tool, a group membership. */
+export interface PlatformCheck {
+  id: string
+  label: string
+  /** Why it's needed. */
+  description: string
+  ok: boolean
+  /** Show a "Grant" button that asks the system for it. */
+  request?: boolean
+  /** Show an "Open Settings" button for the system settings page that controls it. */
+  openSettings?: boolean
+  /** A shell command that fixes it, shown with a copy button. */
+  command?: string
+  /** Extra guidance shown while it's failing, e.g. "then log out and back in". */
+  hint?: string
+}
+
 export interface PermissionStatus {
-  microphone: 'granted' | 'denied' | 'not-determined' | 'restricted' | 'unknown'
-  accessibility: boolean
-  /** In dev, the terminal app macOS actually checks permissions for. */
+  checks: PlatformCheck[]
+  /** In dev on macOS, the terminal app macOS actually checks permissions for. */
   grantTo?: string
 }
 
@@ -160,6 +199,8 @@ export interface EngineStatus {
   modelId: string
   message?: string
   capabilities?: ModelCapabilities
+  /** What the model runs on once loaded, e.g. "Metal", "Vulkan (NVIDIA GeForce RTX 4070)", "CPU". */
+  device?: string
   /** Timing of the most recent dictation, for comparing models. */
   last?: { audioMs: number; transcribeMs: number }
 }
@@ -170,6 +211,8 @@ export interface CleanupStatus {
   sizeMb: number
   downloaded: boolean
   message?: string
+  /** What the model runs on once loaded. */
+  device?: string
   /**
    * The most recent dictation. `applied`: the cleaned text was pasted. Otherwise the raw
    * transcript was: `rejected` means the output strayed too far from what was said.
@@ -192,6 +235,10 @@ export interface CleanupStatus {
 export interface SettingsView {
   settings: Settings
   keyNames: Record<number, string>
+  /** `process.platform` of the main process. */
+  platform: string
+  /** Extra setup for launching at login that the app can't do itself (Hyprland's exec-once). */
+  launchAtLoginHint?: string
 }
 
 export const IPC = {

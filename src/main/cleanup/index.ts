@@ -12,7 +12,7 @@ interface Waiter<T> {
 export class CleanupEngine {
   private worker: UtilityProcess | null = null
   private loadedPath: string | null = null
-  private loading: (Waiter<void> & { path: string }) | null = null
+  private loading: (Waiter<{ device: string }> & { path: string }) | null = null
   private pending = new Map<number, Waiter<{ text: string; ms: number }>>()
   private nextId = 1
 
@@ -20,8 +20,10 @@ export class CleanupEngine {
     return this.loadedPath
   }
 
-  load(modelPath: string): Promise<void> {
-    if (this.loadedPath === modelPath && !this.loading) return Promise.resolve()
+  private device = ''
+
+  load(modelPath: string): Promise<{ device: string }> {
+    if (this.loadedPath === modelPath && !this.loading) return Promise.resolve({ device: this.device })
     if (this.loading) return Promise.reject(new Error('Cleanup model is already loading'))
     return new Promise((resolve, reject) => {
       this.loading = { path: modelPath, resolve, reject }
@@ -102,7 +104,10 @@ export class CleanupEngine {
         const waiter = this.loading
         this.loading = null
         this.loadedPath = msg.type === 'loaded' ? (waiter?.path ?? null) : null
-        if (msg.type === 'loaded') waiter?.resolve()
+        if (msg.type === 'loaded') {
+          this.device = msg.device
+          waiter?.resolve({ device: msg.device })
+        }
         else waiter?.reject(new Error(msg.message))
         return
       }

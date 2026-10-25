@@ -2,6 +2,7 @@ import { app, clipboard, ipcMain, Menu, Notification, shell, Tray, type BrowserW
 import { join } from 'node:path'
 import {
   IPC,
+  type AppInfo,
   type AppState,
   type CleanupStatus,
   type EngineStatus,
@@ -12,13 +13,13 @@ import {
 import { Cleaner } from './cleaner'
 import { CleanupEngine } from './cleanup'
 import { Controller } from './controller'
-import { frontmostApp, runningApps } from './focused-app'
+import { keyNames } from '../shared/keycodes'
 import { migrateLegacyData } from './migrate'
 import { Engine } from './engine'
-import { HotkeyService, keyNames, tapPaste } from './hotkey'
+import { HotkeyService } from './hotkey'
 import { CLEANUP_MODEL, findModel, ModelManager } from './models'
 import { pasteText } from './paste'
-import { getPermissions, openPermissionSettings, requestPermission } from './permissions'
+import { platform } from './platform'
 import { SettingsStore } from './settings'
 import { Transcriber } from './transcriber'
 import { trayIcon } from './tray-icon'
@@ -61,7 +62,12 @@ const STATE_LABEL: Record<AppState, string> = {
 }
 
 function settingsView(): SettingsView {
-  return { settings: store.get(), keyNames: keyNames() }
+  return {
+    settings: store.get(),
+    keyNames: keyNames(process.platform),
+    platform: process.platform,
+    launchAtLoginHint: platform.launchAtLoginHint?.()
+  }
 }
 
 function sendToSettings(channel: string, payload: unknown): void {
@@ -131,12 +137,12 @@ function rebuildTrayMenu(): void {
       ...(cleanup ? [{ label: cleanup, enabled: false }] : []),
       ...(hotkeys.isStarted
         ? []
-        : [{ label: '⚠ Grant Accessibility access to enable hotkeys…', click: () => openSettingsWindow() }]),
+        : [{ label: platform.hotkeyBlockedLabel, click: () => openSettingsWindow() }]),
       { type: 'separator' },
       {
         label: last ? `Paste last: “${preview}”` : 'Paste last transcript',
         enabled: !!last,
-        click: () => void pasteNow(last)
+        click: () => void platform.frontmostApp().then((target) => pasteNow(last, target))
       },
       { label: 'Copy last transcript', enabled: !!last, click: () => void clipboard.writeText(last) },
       { type: 'separator' },
@@ -155,24 +161,29 @@ function rebuildTrayMenu(): void {
           { label: 'Download more models…', click: () => openSettingsWindow() }
         ]
       },
-      { label: 'Settings…', accelerator: 'Command+,', click: () => openSettingsWindow() },
+      { label: 'Settings…', accelerator: 'CmdOrCtrl+,', click: () => openSettingsWindow() },
       { type: 'separator' },
-      { label: 'Quit Wimpr Flow', accelerator: 'Command+Q', click: () => app.quit() }
+      { label: 'Quit Wimpr Flow', accelerator: 'CmdOrCtrl+Q', click: () => app.quit() }
     ])
   )
 }
 
-async function pasteNow(text: string): Promise<void> {
+/** `target` is the app that had focus when recording started; it picks the paste shortcut on Linux. */
+async function pasteNow(text: string, target: AppInfo | null = null): Promise<void> {
   await pasteText(text, store.get().restoreClipboard, {
+    clipboard: platform.clipboard,
     waitForKeysReleased: () => hotkeys.waitForRelease(),
-    sendPasteShortcut: tapPaste
+    sendPasteShortcut: () => platform.sendPaste(target)
   })
 }
 
-/** uiohook needs Accessibility; start it as soon as the user grants it. */
+/**
+ * The key hook needs a permission on macOS (Accessibility) and Linux (the input group);
+ * start it as soon as it's there.
+ */
 function startHotkeysWhenTrusted(): void {
   const tryStart = (): boolean => {
-    if (!getPermissions().accessibility) return false
+    if (!platform.canHookKeys()) return false
     try {
       hotkeys.start()
       console.log('[hotkey] global keyboard hook started')
@@ -184,7 +195,7 @@ function startHotkeysWhenTrusted(): void {
     }
   }
   if (tryStart()) return
-  console.log('[hotkey] waiting for Accessibility permission')
+  console.log('[hotkey] waiting for permission to read the keyboard')
   const timer = setInterval(() => {
     if (tryStart()) clearInterval(timer)
   }, 2000)
@@ -201,9 +212,12 @@ function registerIpc(): void {
     store.update(patch)
     return settingsView()
   })
-  ipcMain.handle(IPC.permissionsGet, () => getPermissions())
-  ipcMain.handle(IPC.permissionsRequest, (_e, kind: 'microphone' | 'accessibility') => requestPermission(kind))
-  ipcMain.handle(IPC.permissionsOpen, (_e, kind: 'microphone' | 'accessibility') => openPermissionSettings(kind))
+  ipcMain.handle(IPC.permissionsGet, () => platform.permissions())
+  ipcMain.handle(IPC.permissionsRequest, async (_e, id: string) => {
+    await platform.requestPermission(id)
+    return platform.permissions()
+  })
+  ipcMain.handle(IPC.permissionsOpen, (_e, id: string) => platform.openPermissionSettings(id))
   ipcMain.handle(IPC.hotkeyRecord, () => (hotkeys.isStarted ? hotkeys.recordCombo() : null))
   ipcMain.handle(IPC.modelsList, () => models.list().map((m) => ({ ...m, progress: models.progress(m.id) })))
   ipcMain.handle(IPC.modelsDownload, async (_e, id: string) => {
@@ -218,7 +232,7 @@ function registerIpc(): void {
   })
   ipcMain.handle(IPC.engineStatus, () => transcriber.status)
   ipcMain.handle(IPC.cleanupStatus, () => cleaner.status)
-  ipcMain.handle(IPC.appsRunning, () => runningApps())
+  ipcMain.handle(IPC.appsRunning, () => platform.runningApps())
   ipcMain.handle(IPC.cleanupDelete, () => {
     cleaner.deleteModel()
     return cleaner.status
@@ -228,9 +242,10 @@ function registerIpc(): void {
   })
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  const keyHook = await platform.createKeyHook()
   store = new SettingsStore()
-  const modelsDir = join(app.getPath('userData'), 'models')
+  const modelsDir = platform.modelsDir()
   models = new ModelManager(modelsDir)
   overlay = createOverlayWindow()
 
@@ -265,17 +280,18 @@ app.whenReady().then(() => {
     setOverlayState: (s) => overlay.webContents.send(IPC.overlayState, s),
     transcribe: (pcm, audioMs) => transcriber.transcribe(pcm, audioMs),
     cleanup: (text, app) => cleaner.clean(text, app),
-    focusedApp: frontmostApp,
+    focusedApp: () => platform.frontmostApp(),
     paste: pasteNow,
     notifyError: (message) => new Notification({ title: 'Wimpr Flow', body: message, silent: true }).show(),
     onStateChange: () => rebuildTrayMenu(),
     resetHotkeys: () => hotkeys.reset()
   })
 
-  hotkeys = new HotkeyService(store.get().hotkeys, (action) => {
+  hotkeys = new HotkeyService(keyHook, store.get().hotkeys, (action) => {
     switch (action) {
       case 'start-hold':
       case 'start-toggle':
+        platform.onHotkeyStart?.(hotkeys.heldKeys)
         controller.start()
         break
       case 'stop':
@@ -291,9 +307,7 @@ app.whenReady().then(() => {
 
   store.onChange((settings, previous) => {
     hotkeys.setBindings(settings.hotkeys)
-    if (settings.launchAtLogin !== previous.launchAtLogin) {
-      app.setLoginItemSettings({ openAtLogin: settings.launchAtLogin })
-    }
+    if (settings.launchAtLogin !== previous.launchAtLogin) platform.setLaunchAtLogin(settings.launchAtLogin)
     if (settings.model !== previous.model) void transcriber.prepare()
     if (settings.cleanup !== previous.cleanup) void cleaner.prepare()
     rebuildTrayMenu()
@@ -303,14 +317,16 @@ app.whenReady().then(() => {
   registerIpc()
 
   tray = new Tray(trayIcon(false))
+  // Windows only opens a tray icon's menu on right-click by default.
+  if (process.platform === 'win32') tray.on('click', () => tray?.popUpContextMenu())
   rebuildTrayMenu()
   startHotkeysWhenTrusted()
   // First launch downloads the default models; later launches just load them. Speech first,
   // so dictation works (unformatted) while the bigger cleanup model is still downloading.
   void transcriber.prepare().then(() => cleaner.prepare())
 
-  const { microphone, accessibility } = getPermissions()
-  if (!store.get().onboarded || microphone !== 'granted' || !accessibility) openSettingsWindow()
+  const { checks } = await platform.permissions()
+  if (!store.get().onboarded || checks.some((c) => !c.ok)) openSettingsWindow()
 })
 
 app.on('second-instance', () => openSettingsWindow())

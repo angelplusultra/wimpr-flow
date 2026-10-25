@@ -45,7 +45,7 @@ api.onStart(({ sessionId, sounds }: StartRecording) => {
     session = null
     recorder.cancel()
     const denied = err.name === 'NotAllowedError'
-    api.sendError(sessionId, denied ? 'Microphone access denied — enable it in System Settings' : `Mic error: ${err.message}`)
+    api.sendError(sessionId, denied ? 'Microphone access denied — allow it in Settings' : `Mic error: ${err.message}`)
   })
 })
 
