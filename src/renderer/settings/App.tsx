@@ -4,7 +4,8 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { cn } from '@/lib/utils'
 import type { CleanupStatus, EngineStatus, ModelInfo, PermissionStatus, SettingsPatch, SettingsView } from '../../shared/types'
 import { Dot, Logo } from './layout'
-import { CleanupPage, DictionaryPage, GeneralPage, ModelsPage, ShortcutsPage } from './pages'
+import { CleanupPage } from './cleanup'
+import { DictionaryPage, GeneralPage, ModelsPage, ShortcutsPage } from './pages'
 
 const api = window.fwf.settings
 
@@ -110,12 +111,7 @@ export function App(): ReactNode {
             />
           )}
           {page === 'cleanup' && (
-            <CleanupPage
-              enabled={settings.cleanup}
-              status={cleanup}
-              onToggle={(on) => update({ cleanup: on })}
-              onStatus={setCleanup}
-            />
+            <CleanupPage settings={settings} status={cleanup} update={update} onStatus={setCleanup} />
           )}
           {page === 'dictionary' && <DictionaryPage settings={settings} engine={engine} update={update} />}
           {page === 'shortcuts' && <ShortcutsPage view={view} update={update} />}

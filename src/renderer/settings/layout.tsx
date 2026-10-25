@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup, ItemTitle } from '@/components/ui/item'
 import { cn } from '@/lib/utils'
 
 export function Page({ title, description, children }: { title: string; description?: ReactNode; children: ReactNode }): ReactNode {
@@ -15,12 +16,13 @@ export function Group({ title, footer, children }: { title?: string; footer?: Re
   return (
     <section className="space-y-2">
       {title && <h2 className="px-1 text-xs font-medium text-muted-foreground">{title}</h2>}
-      <div className="divide-y divide-border overflow-hidden rounded-lg border bg-card">{children}</div>
+      <ItemGroup className="divide-y divide-border overflow-hidden rounded-lg border bg-card">{children}</ItemGroup>
       {footer && <p className="px-1 text-xs leading-relaxed text-subtle">{footer}</p>}
     </section>
   )
 }
 
+/** One setting: title and description on the left, its control on the right. */
 export function Row({
   title,
   description,
@@ -33,13 +35,23 @@ export function Row({
   className?: string
 }): ReactNode {
   return (
-    <div className={cn('flex min-h-14 items-center justify-between gap-6 px-4 py-3', className)}>
-      <div className="min-w-0">
-        <div className="text-[13px] font-medium">{title}</div>
-        {description && <div className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{description}</div>}
-      </div>
-      {children && <div className="flex shrink-0 items-center gap-2">{children}</div>}
-    </div>
+    // Item draws its own (transparent) border, which hides the group's dividers; draw them here.
+    <Item
+      size="sm"
+      role="listitem"
+      className={cn(
+        'min-h-14 flex-nowrap gap-6 rounded-none border-0 px-4 not-last:border-b not-last:border-border',
+        className
+      )}
+    >
+      <ItemContent className="min-w-0 gap-0.5">
+        <ItemTitle className="text-[13px]">{title}</ItemTitle>
+        {description && (
+          <ItemDescription className="line-clamp-none text-xs leading-relaxed text-pretty">{description}</ItemDescription>
+        )}
+      </ItemContent>
+      {children && <ItemActions className="shrink-0">{children}</ItemActions>}
+    </Item>
   )
 }
 

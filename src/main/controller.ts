@@ -1,4 +1,4 @@
-import type { AppState, OverlayState, RecordingResult, Settings, StartRecording } from '../shared/types'
+import type { AppInfo, AppState, OverlayState, RecordingResult, Settings, StartRecording } from '../shared/types'
 
 /** Below this peak RMS the clip is treated as silence; some models hallucinate ("Thank you.") on it. */
 export const SILENCE_PEAK = 0.008
@@ -16,7 +16,9 @@ export interface ControllerDeps {
   setOverlayState: (state: OverlayState) => void
   transcribe: (pcm: Float32Array, audioMs: number) => Promise<string>
   /** Formatting pass over the transcript; resolves with the raw text on any problem. */
-  cleanup: (text: string) => Promise<string>
+  cleanup: (text: string, app: AppInfo | null) => Promise<string>
+  /** The app in front, i.e. the one the text will be pasted into. */
+  focusedApp: () => Promise<AppInfo | null>
   paste: (text: string) => Promise<void>
   notifyError: (message: string) => void
   onStateChange: (state: AppState) => void
@@ -28,6 +30,8 @@ export class Controller {
   private state: AppState = 'idle'
   private sessionId = 0
   private errorTimer: NodeJS.Timeout | null = null
+  /** Looked up when recording starts, while the target app is still in front. */
+  private targetApp: Promise<AppInfo | null> = Promise.resolve(null)
   lastTranscript = ''
 
   constructor(private readonly deps: ControllerDeps) {}
@@ -44,6 +48,7 @@ export class Controller {
     }
     this.clearErrorTimer()
     this.sessionId++
+    this.targetApp = this.deps.focusedApp()
     this.setState('recording')
     this.deps.setOverlayState({ state: 'recording' })
     this.deps.showOverlay()
@@ -79,7 +84,7 @@ export class Controller {
         this.finish()
         return
       }
-      const text = await this.deps.cleanup(raw)
+      const text = await this.deps.cleanup(raw, await this.targetApp)
       if (result.sessionId !== this.sessionId) return
       this.lastTranscript = text
       this.deps.hideOverlay()

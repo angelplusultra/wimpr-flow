@@ -1,5 +1,6 @@
 import { utilityProcess, type UtilityProcess } from 'electron'
 import { join } from 'node:path'
+import type { TargetApp } from './prompt'
 import type { FromCleanupWorker, ToCleanupWorker } from './protocol'
 
 interface Waiter<T> {
@@ -29,7 +30,12 @@ export class CleanupEngine {
   }
 
   /** Resolves with null if it took longer than `timeoutMs`; generation is then cancelled. */
-  clean(text: string, vocabulary: string[], timeoutMs: number): Promise<{ text: string; ms: number } | null> {
+  clean(
+    text: string,
+    vocabulary: string[],
+    timeoutMs: number,
+    app?: TargetApp
+  ): Promise<{ text: string; ms: number } | null> {
     const id = this.nextId++
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
@@ -47,7 +53,7 @@ export class CleanupEngine {
           reject(err)
         }
       })
-      this.send({ type: 'clean', id, text, vocabulary })
+      this.send({ type: 'clean', id, text, vocabulary, app })
     })
   }
 

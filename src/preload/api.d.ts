@@ -1,4 +1,5 @@
 import type {
+  AppInfo,
   CleanupStatus,
   EngineStatus,
   ModelInfo,
@@ -43,6 +44,8 @@ export interface AppApi {
     onCleanupStatus(cb: (s: CleanupStatus) => void): Unsubscribe
     /** Only while cleanup is turned off. */
     deleteCleanupModel(): Promise<CleanupStatus>
+    /** Regular apps that are running, for picking one to add a rule for. */
+    runningApps(): Promise<AppInfo[]>
     openExternal(url: string): Promise<void>
   }
 }

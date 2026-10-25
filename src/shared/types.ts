@@ -5,6 +5,40 @@ export interface Hotkeys {
   toggle: number[] | null
 }
 
+/** An app the user dictates into. */
+export interface AppInfo {
+  bundleId: string
+  name: string
+}
+
+/** Extra cleanup instructions applied when dictating into a specific app. */
+export interface AppRule extends AppInfo {
+  instructions: string
+  enabled: boolean
+}
+
+/** Someone you mention while dictating. */
+export interface Person {
+  id: string
+  /** How you say it, e.g. "Sean". */
+  name: string
+  /** Other ways it gets heard or said, e.g. "Shawn". */
+  aliases: string[]
+  /** Mention to write per app (by bundle id), e.g. "@sean.kelly". Missing: "@" + name. */
+  handles: Record<string, string>
+}
+
+/** An app where people are written as @mentions. */
+export interface MentionApp extends AppInfo {
+  enabled: boolean
+}
+
+export const DEFAULT_MENTION_APPS: MentionApp[] = [
+  { bundleId: 'com.tinyspeck.slackmacgap', name: 'Slack', enabled: true },
+  { bundleId: 'com.hnc.Discord', name: 'Discord', enabled: true },
+  { bundleId: 'com.microsoft.teams2', name: 'Microsoft Teams', enabled: true }
+]
+
 export interface Settings {
   /** Catalog id of the model to transcribe with. */
   model: string
@@ -14,6 +48,13 @@ export interface Settings {
   vocabulary: string
   /** Run transcripts through a local LLM to fix punctuation, filler words and formatting. */
   cleanup: boolean
+  /** Per-app cleanup instructions, matched by bundle id. */
+  appRules: AppRule[]
+  people: Person[]
+  /** Apps where people are written as @mentions. */
+  mentionApps: MentionApp[]
+  /** In mention apps, also write names that aren't in `people` as @Name. */
+  mentionOthers: boolean
   hotkeys: Hotkeys
   minDurationMs: number
   sounds: boolean
@@ -34,6 +75,10 @@ export const DEFAULT_SETTINGS: Settings = {
   language: 'auto',
   vocabulary: '',
   cleanup: true,
+  appRules: [],
+  people: [],
+  mentionApps: DEFAULT_MENTION_APPS,
+  mentionOthers: true,
   hotkeys: {
     hold: [KEY_ALT_RIGHT],
     toggle: [KEY_ALT_RIGHT, KEY_SPACE]
@@ -136,6 +181,10 @@ export interface CleanupStatus {
     raw: string
     /** What was pasted. */
     text: string
+    /** The app it was pasted into, and whether that app's rule / mentions were applied. */
+    app?: string
+    ruleApplied?: boolean
+    mentions?: boolean
   }
 }
 
@@ -169,5 +218,6 @@ export const IPC = {
   cleanupStatus: 'cleanup:status',
   cleanupStatusChanged: 'cleanup:status-changed',
   cleanupDelete: 'cleanup:delete',
+  appsRunning: 'apps:running',
   openExternal: 'open-external'
 } as const

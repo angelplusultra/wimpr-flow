@@ -1,6 +1,6 @@
 // Runs the cleanup LLM in its own utility process, like the transcription worker.
 import type { ChatHistoryItem, Llama, LlamaChatSession, LlamaContext, LlamaModel } from 'node-llama-cpp'
-import { EXAMPLES, SYSTEM_PROMPT, transcriptMessage } from './prompt'
+import { EXAMPLES, SYSTEM_PROMPT, transcriptMessage, type TargetApp } from './prompt'
 import type { FromCleanupWorker, ToCleanupWorker } from './protocol'
 
 const port = process.parentPort
@@ -45,11 +45,11 @@ async function load(modelPath: string): Promise<void> {
   }
 }
 
-async function clean(text: string, vocabulary: string[], signal: AbortSignal): Promise<string> {
+async function clean(text: string, vocabulary: string[], signal: AbortSignal, app?: TargetApp): Promise<string> {
   if (!loaded) throw new Error('No cleanup model loaded')
   const { model, session } = loaded
   session.setChatHistory(HISTORY)
-  return session.prompt(transcriptMessage(text, vocabulary), {
+  return session.prompt(transcriptMessage(text, vocabulary, app), {
     temperature: 0,
     // A formatted transcript is about as long as the raw one; this stops a runaway reply.
     maxTokens: Math.ceil(model.tokenize(text).length * 1.5) + 32,
@@ -68,7 +68,7 @@ async function handleClean(msg: Extract<ToCleanupWorker, { type: 'clean' }>): Pr
   running.set(msg.id, abort)
   const start = performance.now()
   try {
-    const text = await clean(msg.text, msg.vocabulary, abort.signal)
+    const text = await clean(msg.text, msg.vocabulary, abort.signal, msg.app)
     send({ type: 'result', id: msg.id, text, ms: Math.round(performance.now() - start) })
   } catch (err) {
     send({ type: 'error', id: msg.id, message: (err as Error).message })

@@ -1,8 +1,33 @@
-import type { CleanupStatus, ModelProgress, Settings } from '../shared/types'
+import type { AppInfo, CleanupStatus, ModelProgress, Settings } from '../shared/types'
 import type { CleanupEngine } from './cleanup'
-import { acceptCleanup, cleanupTimeoutMs, tidyOutput } from './cleanup/prompt'
+import {
+  acceptCleanup,
+  cleanupTimeoutMs,
+  mentionInstructions,
+  mentionsFor,
+  tidyOutput,
+  type Mention,
+  type TargetApp
+} from './cleanup/prompt'
 import { vocabularyTerms } from './engine/run-options'
 import { CLEANUP_MODEL, type ModelManager } from './models'
+
+/** What the prompt says about the app being dictated into: its rule and its mentions. */
+export function targetFor(
+  settings: Settings,
+  app: AppInfo | null | undefined
+): { target?: TargetApp; mentions: Mention[]; ruleApplied: boolean } {
+  if (!app) return { mentions: [], ruleApplied: false }
+  const rule = settings.appRules.find((r) => r.enabled && r.bundleId === app.bundleId && r.instructions.trim())
+  const mentionApp = settings.mentionApps.some((a) => a.enabled && a.bundleId === app.bundleId)
+  const mentions = mentionApp ? mentionsFor(settings.people, app.bundleId) : []
+  const instructions = mentionApp ? mentionInstructions(mentions, settings.mentionOthers) : ''
+  return {
+    target: { name: app.name, rules: rule?.instructions.trim(), mentions: instructions || undefined },
+    mentions,
+    ruleApplied: !!rule
+  }
+}
 
 export interface CleanerDeps {
   engine: CleanupEngine
@@ -46,7 +71,8 @@ export class Cleaner {
     this.setStatus(this.statusFor('off'))
   }
 
-  async clean(text: string): Promise<string> {
+  /** `app` is where the text will be pasted; its rule, if any, is added to the prompt. */
+  async clean(text: string, app?: AppInfo | null): Promise<string> {
     const settings = this.deps.getSettings()
     if (!settings.cleanup || !text) return text
     if (this._status.state !== 'ready' || this.deps.engine.loadedModelPath !== this.path) {
@@ -55,15 +81,18 @@ export class Cleaner {
       return text
     }
 
+    const { target, mentions, ruleApplied } = targetFor(settings, app)
     const start = performance.now()
     let outcome: NonNullable<CleanupStatus['last']>['outcome']
     let result = text
     try {
-      const r = await this.deps.engine.clean(text, vocabularyTerms(settings.vocabulary), cleanupTimeoutMs(text))
+      // People's names go to the speech model's vocabulary, not here: listed as vocabulary,
+      // Gemma prefers a full name ("Robert Hale") over the person's handle.
+      const r = await this.deps.engine.clean(text, vocabularyTerms(settings.vocabulary), cleanupTimeoutMs(text), target)
       const cleaned = r && tidyOutput(r.text)
       if (cleaned === null) outcome = 'timeout'
       else if (cleaned === text) outcome = 'unchanged'
-      else if (acceptCleanup(text, cleaned)) {
+      else if (acceptCleanup(text, cleaned, mentions)) {
         outcome = 'applied'
         result = cleaned
       } else {
@@ -74,7 +103,16 @@ export class Cleaner {
       outcome = 'error'
       console.error('[cleanup] failed:', err)
     }
-    this.setStatus({ ...this._status, last: { ms: Math.round(performance.now() - start), outcome, raw: text, text: result } })
+    this.setStatus({ ...this._status, last: {
+        ms: Math.round(performance.now() - start),
+        outcome,
+        raw: text,
+        text: result,
+        app: app?.name,
+        ruleApplied,
+        mentions: !!target?.mentions
+      }
+    })
     return result
   }
 

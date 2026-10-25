@@ -10,7 +10,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import type {
-  CleanupStatus,
   EngineStatus,
   ModelInfo,
   ModelProgress,
@@ -19,6 +18,7 @@ import type {
   SettingsPatch,
   SettingsView
 } from '../../shared/types'
+import { useDraft } from './draft'
 import { formatSize, Group, Page, Row } from './layout'
 
 const api = window.fwf.settings
@@ -275,117 +275,6 @@ export function ModelsPage({
   )
 }
 
-// ---------------------------------------------------------------- AI cleanup
-
-const CLEANUP_OUTCOME: Record<NonNullable<CleanupStatus['last']>['outcome'], string> = {
-  applied: '',
-  unchanged: ' · nothing to change',
-  rejected: ' · strayed from what you said, pasted raw',
-  timeout: ' · too slow, pasted raw',
-  error: ' · failed, pasted raw'
-}
-
-export function cleanupSummary(status: CleanupStatus): ReactNode {
-  switch (status.state) {
-    case 'off':
-      return 'Off — transcripts are pasted exactly as the speech model wrote them.'
-    case 'downloading':
-      return <>Downloading {formatSize(status.sizeMb)}… {status.message}. Until then, text is pasted as-is.</>
-    case 'loading':
-      return 'Loading…'
-    case 'error':
-      return <span className="text-destructive">{status.message}</span>
-    case 'ready':
-      return status.last ? (
-        <>
-          Last cleanup <span className="text-foreground tabular-nums">{(status.last.ms / 1000).toFixed(2)}s</span>
-          {CLEANUP_OUTCOME[status.last.outcome]}
-        </>
-      ) : (
-        'Ready'
-      )
-    default:
-      return null
-  }
-}
-
-export function CleanupPage({
-  enabled,
-  status,
-  onToggle,
-  onStatus
-}: {
-  enabled: boolean
-  status: CleanupStatus | null
-  onToggle: (v: boolean) => void
-  onStatus: (s: CleanupStatus) => void
-}): ReactNode {
-  const [confirmDelete, setConfirmDelete] = useState(false)
-  return (
-    <Page
-      title="AI cleanup"
-      description="A small local language model tidies every transcript before it's pasted."
-    >
-      <Group
-        footer="Uses your dictionary for spellings. If cleanup is slow or changes what you said, the raw transcript is pasted instead."
-      >
-        <Row title="Clean up transcripts" description="Punctuation, capitalization, filler words, emails and numbers.">
-          <Switch checked={enabled} onCheckedChange={onToggle} />
-        </Row>
-        {status && (
-          <Row
-            title={
-              <span className="flex items-center gap-2">
-                {status.modelName}
-                <span className="text-xs font-normal text-subtle">Google · {formatSize(status.sizeMb)}</span>
-              </span>
-            }
-            description={cleanupSummary(status)}
-          >
-            {(status.state === 'loading' || status.state === 'downloading') && (
-              <LoaderCircle className="size-4 animate-spin text-muted-foreground" />
-            )}
-            {!enabled &&
-              status.downloaded &&
-              (confirmDelete ? (
-                <Button size="sm" variant="destructive" onClick={() => void api.deleteCleanupModel().then(onStatus)}>
-                  Delete {formatSize(status.sizeMb)}?
-                </Button>
-              ) : (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="text-muted-foreground hover:text-destructive"
-                  onClick={() => setConfirmDelete(true)}
-                >
-                  Delete model
-                </Button>
-              ))}
-          </Row>
-        )}
-      </Group>
-
-      {status?.last && (
-        <Group title="Last dictation">
-          <Transcript label="Heard" text={status.last.raw} muted />
-          <Transcript label="Pasted" text={status.last.text} />
-        </Group>
-      )}
-    </Page>
-  )
-}
-
-function Transcript({ label, text, muted }: { label: string; text: string; muted?: boolean }): ReactNode {
-  return (
-    <div className="flex gap-4 px-4 py-3">
-      <div className="w-14 shrink-0 pt-px text-xs text-subtle">{label}</div>
-      <p className={'min-w-0 text-[13px] leading-relaxed select-text ' + (muted ? 'text-muted-foreground' : 'text-foreground')}>
-        {text}
-      </p>
-    </div>
-  )
-}
-
 // ---------------------------------------------------------------- Dictionary
 
 export function DictionaryPage({
@@ -452,19 +341,16 @@ export function DictionaryPage({
   )
 }
 
-/** Keeps a local draft and saves on blur, so every keystroke doesn't rewrite settings. */
 function VocabularyField({ value, onCommit }: { value: string; onCommit: (v: string) => void }): ReactNode {
-  const [draft, setDraft] = useState(value)
-  useEffect(() => setDraft(value), [value])
+  const draft = useDraft(value, onCommit)
   return (
     <Textarea
       rows={5}
-      value={draft}
       spellCheck={false}
+      aria-label="Vocabulary"
       placeholder="Supabase, Kubernetes, jane@example.com"
-      className="min-h-28 resize-none border-0 bg-transparent px-1 text-[13px] shadow-none focus-visible:ring-0 dark:bg-transparent"
-      onChange={(e) => setDraft(e.target.value)}
-      onBlur={() => draft !== value && onCommit(draft)}
+      className="min-h-0 resize-none border-0 bg-transparent px-1 text-[13px] leading-relaxed shadow-none focus-visible:ring-0 md:text-[13px] dark:bg-transparent"
+      {...draft}
     />
   )
 }

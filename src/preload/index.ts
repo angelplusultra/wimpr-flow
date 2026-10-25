@@ -44,6 +44,7 @@ const api: AppApi = {
     getCleanupStatus: () => ipcRenderer.invoke(IPC.cleanupStatus),
     onCleanupStatus: (cb: (s: CleanupStatus) => void) => subscribe(IPC.cleanupStatusChanged, cb),
     deleteCleanupModel: () => ipcRenderer.invoke(IPC.cleanupDelete),
+    runningApps: () => ipcRenderer.invoke(IPC.appsRunning),
     openExternal: (url: string) => ipcRenderer.invoke(IPC.openExternal, url)
   }
 }

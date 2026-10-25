@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { acceptCleanup, cleanupTimeoutMs, levenshtein, tidyOutput, transcriptMessage } from '../src/main/cleanup/prompt'
+import {
+  acceptCleanup,
+  cleanupTimeoutMs,
+  levenshtein,
+  mentionInstructions,
+  mentionsFor,
+  tidyOutput,
+  transcriptMessage
+} from '../src/main/cleanup/prompt'
+import type { Person } from '../src/shared/types'
 
 describe('levenshtein', () => {
   it('counts edits', () => {
@@ -73,5 +82,65 @@ describe('transcriptMessage', () => {
   it('lists the vocabulary', () => {
     expect(transcriptMessage('hi', ['a', 'b'])).toBe('Vocabulary: a, b\n<transcript>hi</transcript>')
     expect(transcriptMessage('hi', [])).toContain('Vocabulary: (none)')
+  })
+
+  it('names the target app and adds its rule when there is one', () => {
+    expect(transcriptMessage('hey sean', [], { name: 'Slack', rules: 'Use @mentions.' })).toBe(
+      'App: Slack\nApp rules: Use @mentions.\nVocabulary: (none)\n<transcript>hey sean</transcript>'
+    )
+    expect(transcriptMessage('hey sean', [], { name: 'Mail' })).toBe(
+      'App: Mail\nVocabulary: (none)\n<transcript>hey sean</transcript>'
+    )
+  })
+})
+
+describe('mentions', () => {
+  const SLACK = 'com.tinyspeck.slackmacgap'
+  const people: Person[] = [
+    { id: '1', name: 'Sean', aliases: ['Shawn', ' '], handles: { [SLACK]: '@sean.kelly', teams: 'Sean Kelly' } },
+    { id: '2', name: 'Maria', aliases: [], handles: { [SLACK]: 'maria.g' } },
+    { id: '3', name: '  ', aliases: [], handles: {} }
+  ]
+
+  it('resolves handles per app, adding @ and falling back to the name', () => {
+    expect(mentionsFor(people, SLACK)).toEqual([
+      { name: 'Sean', aliases: ['Shawn'], handle: '@sean.kelly' },
+      { name: 'Maria', aliases: [], handle: '@maria.g' }
+    ])
+    expect(mentionsFor(people, 'teams').map((m) => m.handle)).toEqual(['@Sean Kelly', '@Maria'])
+  })
+
+  it('lists every spelling as its own entry', () => {
+    const text = mentionInstructions(mentionsFor(people, SLACK), true)
+    expect(text).toContain('Sean -> @sean.kelly; Shawn -> @sean.kelly; Maria -> @maria.g.')
+    expect(text).toContain('Write anyone else as @Name.')
+    expect(mentionInstructions(mentionsFor(people, SLACK), false)).toContain('Write anyone else as a plain name.')
+  })
+
+  it('mentions everyone by name without a list, or nothing when that is off', () => {
+    expect(mentionInstructions([], true)).toContain('"hey sean" -> "Hey @Sean"')
+    expect(mentionInstructions([], false)).toBe('')
+  })
+
+  it('accepts long handles in short dictations', () => {
+    const mentions = [{ name: 'Sean', aliases: [], handle: '@sean.kelly.platform-team' }]
+    expect(acceptCleanup('hey sean', 'Hey @sean.kelly.platform-team!', mentions)).toBe(true)
+    expect(acceptCleanup('hey sean', 'Hey @sean.kelly.platform-team!')).toBe(false)
+  })
+})
+
+describe('acceptCleanup with nicknames', () => {
+  const robert = { name: 'Robert Hale', aliases: ['Dad', 'Bob', 'Robert'], handle: '@Rob Hale' }
+
+  it('accepts a nickname replaced by a handle that shares no letters with it', () => {
+    expect(acceptCleanup('tell dad im on my way', "Tell @Rob Hale I'm on my way.", [robert])).toBe(true)
+  })
+
+  it('still rejects rewrites around a mention', () => {
+    expect(acceptCleanup('tell dad im on my way', '@Rob Hale, here is a poem about the road home and the stars.', [robert])).toBe(false)
+  })
+
+  it('only removes whole words', () => {
+    expect(acceptCleanup('daddy issues', 'Daddy issues.', [robert])).toBe(true)
   })
 })

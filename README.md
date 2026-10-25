@@ -24,7 +24,21 @@ On first launch:
 2. **Wait for the models.** The speech model (Parakeet TDT v3, 740 MB) downloads automatically, then the cleanup model (Gemma 4 E2B, 3.1 GB). Progress shows in Settings and in the menu bar. Dictation works as soon as the speech model is ready; until the cleanup model is ready, text is pasted unformatted.
 3. Click into any text field, **hold Right ⌥ Option**, talk, release.
 
-To build a standalone app run `pnpm dist`. That produces `dist/fuck-wispr-flow-<version>-arm64.dmg`, ad-hoc signed. People who install it need nothing else.
+To build a standalone app run `pnpm dist`. That produces `dist/fuck-wispr-flow-<version>-arm64.dmg`, signed with a local certificate (see Code signing). People who install it need nothing else.
+
+## People and @mentions
+
+Settings → AI cleanup → People maps names you say to the @mention each app needs. Dictating "hey sean can you review my pr" into Slack pastes `Hey @sean.kelly, can you review my PR?`, and in Teams `@Sean Kelly, …`.
+
+- **People:** the name you say, other spellings the speech model might produce ("heard as": Shawn), and a handle per app. An empty handle falls back to `@Name`. Names are also added to the speech model's vocabulary.
+- **Mention apps:** Slack, Discord and Microsoft Teams by default; add any running app. Mentions only happen in these apps.
+- **Mention people not in your list:** on by default, so anyone you address becomes `@Name`; off means only your list gets mentions.
+
+AI cleanup does the matching, so slight mis-transcriptions still map to the right person. The drift check treats a handle as the spoken name, so long handles aren't mistaken for the model rewriting you. The app in front when you start recording is the one the text goes into, and it's looked up with `lsappinfo` (built into macOS, no permission needed).
+
+## App rules
+
+Settings → AI cleanup → App rules adds free-form instructions for AI cleanup in one app, e.g. "Keep it casual, all lowercase" for iMessage. Both people and rules need AI cleanup to be on.
 
 ## Models
 
@@ -113,7 +127,7 @@ pnpm typecheck
 ## Troubleshooting
 
 - **Settings still says "Grant" even though Accessibility is turned on.** In dev, the toggle has to be on for your *terminal* app, not "Electron". See Quick start.
-- **The hotkey does nothing.** Accessibility isn't granted, or it was granted to an older build. Ad-hoc signed builds look like a new app to macOS each time they're rebuilt. In System Settings → Privacy & Security → Accessibility, remove the Fuck Wispr Flow (or Electron) entry and grant it again. Or run `tccutil reset Accessibility dev.fuckwisprflow.app` and grant it again.
+- **The hotkey does nothing.** Accessibility isn't granted, or it was granted to a build signed differently (e.g. before the signing certificate was set up, or without it). In System Settings → Privacy & Security → Accessibility, remove the Fuck Wispr Flow (or Electron) entry and grant it again. Or run `tccutil reset Accessibility dev.fuckwisprflow.app` and grant it again.
 - **The text was transcribed but never pasted.** No text field had focus. Use **Paste last transcript** or **Copy last transcript** from the menu bar.
 - **Fn / Globe key.** The keyboard hook can't see it, so it isn't supported yet.
 
@@ -126,6 +140,34 @@ pnpm typecheck
 - Per-app context and custom snippets
 - Windows and Linux
 - Fn key support
+
+## Code signing
+
+Builds are signed with a self-signed certificate named **Fuck Wispr Flow Local Signing** in the login keychain (`identity` in `electron-builder.yml`). macOS ties Microphone and Accessibility permissions to that certificate rather than to one exact build, so they survive rebuilds. Other Macs won't trust it; distributing needs an Apple Developer ID.
+
+To recreate the certificate on a new Mac:
+
+```sh
+cat > cert.cnf <<'CNF'
+[ req ]
+distinguished_name = dn
+prompt = no
+x509_extensions = ext
+[ dn ]
+CN = Fuck Wispr Flow Local Signing
+[ ext ]
+basicConstraints = critical, CA:false
+keyUsage = critical, digitalSignature
+extendedKeyUsage = critical, codeSigning
+CNF
+openssl req -x509 -newkey rsa:2048 -nodes -days 3650 -config cert.cnf -keyout key.pem -out cert.pem
+openssl pkcs12 -export -inkey key.pem -in cert.pem -out cert.p12 -passout pass:temp
+security import cert.p12 -k ~/Library/Keychains/login.keychain-db -P temp -T /usr/bin/codesign
+security add-trusted-cert -r trustRoot -p codeSign -k ~/Library/Keychains/login.keychain-db cert.pem  # asks for your password
+rm key.pem cert.p12 cert.pem cert.cnf
+```
+
+On the first build, macOS asks whether codesign may use the key: enter your password and choose **Always Allow**.
 
 ## App icon
 

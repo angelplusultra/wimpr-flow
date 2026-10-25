@@ -44,3 +44,36 @@ describe('mergeSettings', () => {
     expect(mergeSettings(DEFAULT_SETTINGS, 'nope')).toEqual(DEFAULT_SETTINGS)
   })
 })
+
+describe('appRules', () => {
+  it('starts empty', () => {
+    expect(mergeSettings(DEFAULT_SETTINGS, {}).appRules).toEqual([])
+  })
+
+  it('replaces the list and drops malformed rules', () => {
+    const rule = { bundleId: 'com.apple.mail', name: 'Mail', instructions: 'Formal.', enabled: true }
+    const s = mergeSettings(DEFAULT_SETTINGS, { appRules: [rule, { bundleId: 'x' }, 'nope'] })
+    expect(s.appRules).toEqual([rule])
+  })
+
+  it('keeps the defaults when the value is not a list', () => {
+    expect(mergeSettings(DEFAULT_SETTINGS, { appRules: 'Slack' }).appRules).toEqual(DEFAULT_SETTINGS.appRules)
+  })
+})
+
+describe('people and mention apps', () => {
+  it('defaults to Slack, Discord and Teams with mentions for everyone', () => {
+    const s = mergeSettings(DEFAULT_SETTINGS, {})
+    expect(s.mentionApps.map((a) => a.name)).toEqual(['Slack', 'Discord', 'Microsoft Teams'])
+    expect(s.mentionOthers).toBe(true)
+    expect(s.people).toEqual([])
+  })
+
+  it('keeps valid people and drops malformed ones', () => {
+    const sean = { id: '1', name: 'Sean', aliases: ['Shawn'], handles: { 'com.tinyspeck.slackmacgap': '@sean.kelly' } }
+    const s = mergeSettings(DEFAULT_SETTINGS, {
+      people: [sean, { id: '2', name: 'X', aliases: 'nope', handles: {} }, { id: '3', name: 'Y', aliases: [], handles: { a: 1 } }]
+    })
+    expect(s.people).toEqual([sean])
+  })
+})

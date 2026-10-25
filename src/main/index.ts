@@ -12,6 +12,7 @@ import {
 import { Cleaner } from './cleaner'
 import { CleanupEngine } from './cleanup'
 import { Controller } from './controller'
+import { frontmostApp, runningApps } from './focused-app'
 import { migrateLegacyData } from './migrate'
 import { Engine } from './engine'
 import { HotkeyService, keyNames, tapPaste } from './hotkey'
@@ -215,6 +216,7 @@ function registerIpc(): void {
   })
   ipcMain.handle(IPC.engineStatus, () => transcriber.status)
   ipcMain.handle(IPC.cleanupStatus, () => cleaner.status)
+  ipcMain.handle(IPC.appsRunning, () => runningApps())
   ipcMain.handle(IPC.cleanupDelete, () => {
     cleaner.deleteModel()
     return cleaner.status
@@ -260,7 +262,8 @@ app.whenReady().then(() => {
     hideOverlay: () => overlay.hide(),
     setOverlayState: (s) => overlay.webContents.send(IPC.overlayState, s),
     transcribe: (pcm, audioMs) => transcriber.transcribe(pcm, audioMs),
-    cleanup: (text) => cleaner.clean(text),
+    cleanup: (text, app) => cleaner.clean(text, app),
+    focusedApp: frontmostApp,
     paste: pasteNow,
     notifyError: (message) => new Notification({ title: 'Fuck Wispr Flow', body: message, silent: true }).show(),
     onStateChange: () => rebuildTrayMenu(),

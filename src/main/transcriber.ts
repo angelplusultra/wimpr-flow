@@ -1,7 +1,7 @@
 import { cleanTranscript } from '../shared/transcript'
 import type { EngineStatus, ModelProgress, Settings } from '../shared/types'
 import type { Engine } from './engine'
-import { runOptions } from './engine/run-options'
+import { dictionaryTerms, runOptions } from './engine/run-options'
 import { findModel, type ModelManager } from './models'
 
 export interface TranscriberDeps {
@@ -85,7 +85,7 @@ export class Transcriber {
     }
     const { text, ms } = await this.deps.engine.transcribe(
       pcm,
-      runOptions(capabilities, settings.language, settings.vocabulary)
+      runOptions(capabilities, settings.language, dictionaryTerms(settings))
     )
     this.setStatus({ ...this._status, last: { audioMs: Math.round(audioMs), transcribeMs: ms } })
     return cleanTranscript(text)
