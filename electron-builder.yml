@@ -22,7 +22,7 @@ mac:
   category: public.app-category.productivity
   # Self-signed certificate in the login keychain (see README "Code signing"), so macOS
   # keeps permissions across rebuilds. Use a Developer ID instead to distribute.
-  identity: Fuck Wispr Flow Local Signing
+  identity: Wimpr Flow Local Signing
   hardenedRuntime: true
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist

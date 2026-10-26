@@ -74,7 +74,7 @@ Settings → AI cleanup → App rules adds free-form instructions for AI cleanup
 
 ## Models
 
-Pick one in Settings. Models download on demand to `~/Library/Application Support/Wimpr Flow/models` (settings and models from the app's earlier names, Fuck Wispr Flow and open-wispr, are moved there on first launch), and you can switch between downloaded ones from the menu bar. These are transcribe.cpp's verified GGUF builds, quantized to the smallest size that matches full-precision accuracy.
+Pick one in Settings. Models download on demand to `~/Library/Application Support/Wimpr Flow/models` (settings and models from earlier versions of the app are moved there on first launch), and you can switch between downloaded ones from the menu bar. These are transcribe.cpp's verified GGUF builds, quantized to the smallest size that matches full-precision accuracy.
 
 | Model | Size | Languages | Notes |
 | --- | --- | --- | --- |
@@ -175,7 +175,7 @@ pnpm typecheck
 
 ## Code signing
 
-Builds are signed with a self-signed certificate named **Fuck Wispr Flow Local Signing** in the login keychain (`identity` in `electron-builder.yml`). macOS ties Microphone and Accessibility permissions to that certificate rather than to one exact build, so they survive rebuilds. Other Macs won't trust it; distributing needs an Apple Developer ID.
+Builds are signed with a self-signed certificate named **Wimpr Flow Local Signing** in the login keychain (`identity` in `electron-builder.yml`). macOS ties Microphone and Accessibility permissions to that certificate rather than to one exact build, so they survive rebuilds. Other Macs won't trust it; distributing needs an Apple Developer ID.
 
 To recreate the certificate on a new Mac:
 
@@ -186,7 +186,7 @@ distinguished_name = dn
 prompt = no
 x509_extensions = ext
 [ dn ]
-CN = Fuck Wispr Flow Local Signing
+CN = Wimpr Flow Local Signing
 [ ext ]
 basicConstraints = critical, CA:false
 keyUsage = critical, digitalSignature
